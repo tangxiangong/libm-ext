@@ -1,0 +1,12 @@
+[package]
+name = "libm-ext"
+version = "0.1.0"
+edition = "2024"
+authors = ["tangxiangong <tangxiangong@gmail.com>"]
+description = "Implementation of mathematical special functions (since C++17) not available in `libm` crate"
+license = "MIT OR Apache-2.0"
+categories = ["math", "science"]
+keywords = ["special-functions"]
+repository = "https://github.com/tangxiangong/libm-ext"
+
+[dependencies]
