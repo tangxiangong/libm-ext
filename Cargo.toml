@@ -11,7 +11,7 @@ keywords = ["special-functions"]
 repository = "https://github.com/tangxiangong/libm-ext"
 
 [lib]
-name = "fixed_point_accel"
+name = "libm_ext"
 doctest = false
 
 [dependencies]
