@@ -5,8 +5,18 @@ edition = "2024"
 authors = ["tangxiangong <tangxiangong@gmail.com>"]
 description = "Implementation of mathematical special functions (since C++17) not available in `libm` crate"
 license = "MIT OR Apache-2.0"
+readme = "README.md"
 categories = ["math", "science"]
 keywords = ["special-functions"]
 repository = "https://github.com/tangxiangong/libm-ext"
 
+[lib]
+name = "fixed_point_accel"
+doctest = false
+
 [dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
