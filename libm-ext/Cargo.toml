@@ -1,0 +1,21 @@
+[package]
+name = "libm-ext"
+description = "libm extension"
+categories = ["math", "scientific"]
+keywords = ["math", "scientific", "libm", "extension"]
+readme = "README.md"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "./docs-header.html"]
+
+[lib]
+name = "libm_ext"
+doctest = false
+
+[dependencies]
+libm = "0.2"
