@@ -1,6 +1,7 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
-pub mod trigonometric;
+pub mod trig;
+pub(crate) mod utils;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
