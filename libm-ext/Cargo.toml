@@ -11,7 +11,12 @@ version.workspace = true
 edition.workspace = true
 
 [package.metadata.docs.rs]
-rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "./docs-header.html"]
+rustdoc-args = [
+    "--cfg",
+    "docsrs",
+    "--html-in-header",
+    "./libm-ext/docs-header.html",
+]
 
 [lib]
 name = "libm_ext"
