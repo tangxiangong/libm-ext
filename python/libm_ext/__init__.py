@@ -1,5 +1,4 @@
-from libm_ext._core import hello_from_bin
+from . import ext
+from .trig import sinpi, cospi, sincospi
 
-
-def main() -> None:
-    print(hello_from_bin())
+__all__ = ["ext", "sinpi", "cospi", "sincospi"]
