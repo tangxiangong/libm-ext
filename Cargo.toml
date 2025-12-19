@@ -6,7 +6,7 @@ members = ["libm-ext", "."]
 authors = ["tangxiangong <tangxiangong@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tangxiangong/libm-ext"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 
 [package]
