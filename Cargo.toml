@@ -12,11 +12,16 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "stub_gen"
 path = "src/bin/stub_gen.rs"
-required-features = ["stub-gen"]
+required-features = ["stub_gen"]
 
 [features]
-stub-gen = ["pyo3-stub-gen"]
+stub_gen = ["pyo3-stub-gen"]
 
 [dependencies]
+libm-ext = { path = "libm-ext" }
+num_cpus = "1.17.0"
+numpy = "0.27.1"
+paste = "1.0.15"
 pyo3 = { version = "0.27", features = ["abi3-py311"] }
 pyo3-stub-gen = { version = "0.17", optional = true }
+rayon = "1.11.0"
