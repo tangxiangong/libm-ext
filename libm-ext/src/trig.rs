@@ -2,12 +2,9 @@
 //!
 //! The implementation is based on the [Julia Standard Library](https://github.com/JuliaLang/julia/blob/master/base/special/trig.jl).
 //!
-//! - [`sinpi`]
-//! - [`cospi`]
-//! - [`sinpif`]
-//! - [`cospif`]
-//! - [`sincospi`]
-//! - [`sincospif`]
+//! - [`sinpi`] / [`sinpif`]
+//! - [`cospi`] / [`cospif`]
+//! - [`sincospi`] / [`sincospif`]
 //!
 
 use crate::utils::evalpoly;
@@ -32,7 +29,7 @@ fn sinpi_kernel(x: f64) -> f64 {
     let inner = x_bisquare.mul_add(r, 1.2245907532225998e-16);
     let inner = (-5.16771278004997f64).mul_add(x_square, inner);
 
-    std::f64::consts::PI.mul_add(x, x * inner)
+    3.141592653589793f64.mul_add(x, x * inner)
 }
 
 #[inline]
@@ -86,7 +83,7 @@ fn cospif_kernel_wide(x: f32) -> f64 {
 fn sinpif_kernel_wide(x: f32) -> f64 {
     let x_f64 = x as f64;
     let coes = [
-        std::f64::consts::PI,
+        3.1415926535762266,
         -5.167712769188119,
         2.5501626483206374,
         -0.5992021090314925,
@@ -291,7 +288,6 @@ mod tests {
         for i in -10..=10 {
             let x = i as f64;
             assert_eq!(sinpi(x), 0.0, "sinpi({}) should be 0.0", x);
-            // Check sign of zero preservation if needed, though 0.0 vs -0.0 can be tricky
         }
 
         // sin(pi * (n + 0.5)) = (-1)^n
