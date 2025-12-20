@@ -1,14 +1,13 @@
 [project]
 name = "libm-ext"
 version = "0.0.1"
-description = "libm extension"
-readme = "README.md"
+description = "A Python package wrapping the essential mathematical special functions in libm-ext with vectorized support."
+readme = "python/README.md"
 authors = [{ name = "tangxiangong", email = "tangxiangong@gmail.com" }]
 requires-python = ">=3.11"
-license = { file = "LICENSE-MIT" }
-dependencies = [
-    "numpy>=2.3.5",
-]
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE*"]
+dependencies = ["numpy>=2.3.5"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -21,7 +20,6 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Physics",
     "Typing :: Typed",
 ]
 

@@ -1,26 +1,42 @@
 <div align=center>
-<h1 align="center">
+<h1>
 libm-ext
 </h1>
 <p align="center">
-An extension to <a href="https://crates.io/crates/libm">libm</a> providing essential mathematical special functions in pure Rust, and a Python package wrapping them with vectorized support.
+A Python package wrapping the essential mathematical special functions in <a href="https://crates.io/crates/libm-ext">libm-ext</a> with vectorized support.
 </p>
 <p align="center">
-<a href="https://crates.io/crates/libm-ext"> <img alt="Crates.io Version" src="https://img.shields.io/crates/v/libm-ext?style=for-the-badge"> </a>
-<a href="https://docs.rs/libm-ext"> <img alt="docs.rs" src="https://img.shields.io/docsrs/libm-ext?style=for-the-badge"> </a>
 <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/crates/l/libm-ext?style=for-the-badge">
 <a href="https://pypi.org/project/libm-ext/"> <img alt="PyPI" src="https://img.shields.io/pypi/v/libm-ext?style=for-the-badge"> </a>
 </p>
 </div>
-
-## Usage
-Please refer to [Python](python/README.md) or [Rust](libm-ext/README.md) for detailed usage.
 
 ## Trigonometric functions
 
 - `sinpi` / `sinpif` for $\sin(\pi x)$ (`f64` / `f32`)
 - `cospi` / `cospif` for $\cos(\pi x)$ (`f64` / `f32`)
 - `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (`f64` / `f32`)
+
+## Usage
+### Scalar functions
+
+```python
+from libm_ext import sinpi, cospi, sincospi
+
+sinpi(1.0)
+cospi(1.0)
+sincospi(1.0)
+```
+### Vectorized functions with NumPy ndarray
+
+```python
+import numpy as np
+from libm_ext.vectorized import sinpi, cospi
+
+x = np.random.standard_normal(16000)
+sinpi(x)
+cospi(x)
+```
 
 ## License
 

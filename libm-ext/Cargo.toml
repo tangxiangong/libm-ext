@@ -1,8 +1,8 @@
 [package]
 name = "libm-ext"
-description = "libm extension"
+description = "An extension to libm providing essential mathematical special functions."
 categories = ["mathematics"]
-keywords = ["math", "scientific", "libm", "extension"]
+keywords = ["math", "scientific", "libm", "extension", "special-functions"]
 readme = "README.md"
 authors = ["tangxiangong <tangxiangong@gmail.com>"]
 license = "MIT OR Apache-2.0"
