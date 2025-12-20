@@ -98,7 +98,7 @@ def cospi(x: npt.NDArray, threshold: int = 16000) -> npt.NDArray:
 
 
 if __name__ == "__main__":
-    from libm_ext.ext.utils import bench
+    from libm_ext.vectorized.utils import bench
 
     x = np.random.standard_normal(16000)
     bench("sinpi-serial", lambda: _sinpi_serial(x))
