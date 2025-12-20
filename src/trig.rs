@@ -1,11 +1,10 @@
+use crate::vectorized;
 use libm_ext::trig;
 use numpy::{PyArrayDyn, PyArrayMethods, PyReadonlyArrayDyn};
 use pyo3::prelude::*;
 #[cfg(feature = "stub_gen")]
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use rayon::prelude::*;
-
-use crate::vectorized;
 
 /// Compute $\sin(\pi x)$ more accurately than `sin(pi*x)`, especially for large `x` (f64).
 #[cfg_attr(feature = "stub_gen", gen_stub_pyfunction)]
