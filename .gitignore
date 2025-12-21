@@ -26,3 +26,5 @@ uv.lock
 **/*.py[cod]
 .venv
 **/__pycache__
+
+libm-ext/src/main.rs
