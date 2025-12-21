@@ -18,9 +18,9 @@ Please refer to [Python](python/README.md) or [Rust](libm-ext/README.md) for det
 
 ## Trigonometric functions
 
-- `sinpi` / `sinpif` for $\sin(\pi x)$ (`f64` / `f32`)
-- `cospi` / `cospif` for $\cos(\pi x)$ (`f64` / `f32`)
-- `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (`f64` / `f32`)
+- `sinpi` / `sinpif` for $\sin(\pi x)$ (double-precision / single-precision)
+- `cospi` / `cospif` for $\cos(\pi x)$ (double-precision / single-precision)
+- `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (double-precision / single-precision)
 
 ## License
 
