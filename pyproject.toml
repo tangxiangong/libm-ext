@@ -1,6 +1,6 @@
 [project]
 name = "libm-ext"
-version = "0.0.1"
+version = "0.0.2"
 description = "A Python package wrapping the essential mathematical special functions in libm-ext with vectorized support."
 readme = "python/README.md"
 authors = [{ name = "tangxiangong", email = "tangxiangong@gmail.com" }]
