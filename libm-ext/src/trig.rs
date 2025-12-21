@@ -1,10 +1,38 @@
-//! Trigonometric functions
+//! Trigonometric functions.
 //!
-//! The implementation is based on the [Julia Standard Library](https://github.com/JuliaLang/julia/blob/master/base/special/trig.jl).
+//! # Overview
 //!
-//! - [`sinpi`] / [`sinpif`]
-//! - [`cospi`] / [`cospif`]
-//! - [`sincospi`] / [`sincospif`]
+//! This module provides high-precision implementations of:
+//!
+//! | Function | Description |
+//! |----------|-------------|
+//! | [`sinpi`] / [`sinpif`] | Compute $\sin(\pi x)$ |
+//! | [`cospi`] / [`cospif`] | Compute $\cos(\pi x)$ |
+//! | [`sincospi`] / [`sincospif`] | Compute both $\sin(\pi x)$ and $\cos(\pi x)$ |
+//!
+//! # Why `sinpi` and `cospi`?
+//!
+//! Computing `sin(π * x)` directly with the standard library suffers from two problems:
+//!
+//! 1. **Representation error**: The constant π cannot be exactly represented in floating-point,
+//!    so `std::f64::consts::PI * x` already introduces error before the sine computation.
+//!
+//! 2. **Argument reduction error**: For large `x`, the standard `sin` function must reduce
+//!    the argument modulo 2π, which accumulates significant error.
+//!
+//! The `sinpi(x)` function avoids both issues by:
+//! - Using argument reduction modulo 2 (exact for floating-point)
+//! - Applying the factor of π inside the polynomial approximation with full precision
+//!
+//! # Accuracy
+//!
+//! - **f64 versions**: Typically within 1-2 ULP (Units in the Last Place)
+//! - **f32 versions**: Typically within 1-2 ULP, using f64 intermediate calculations
+//!
+//! # Implementation
+//!
+//! The implementation is based on the [Julia Standard Library](https://github.com/JuliaLang/julia/blob/master/base/special/trig.jl),
+//! using minimax polynomial approximations with double-double arithmetic for the leading terms.
 //!
 #![allow(clippy::approx_constant)]
 
@@ -14,7 +42,28 @@ use hexf::hexf64;
 const MAXINTFLOAT64: u64 = 1 << f64::MANTISSA_DIGITS;
 const MAXINTFLOAT32: u64 = 1 << f32::MANTISSA_DIGITS;
 
-/// Uses minimax polynomial of $\sin(\pi x)/x$ for $x \in [0, 0.25]$ to approximate $\sin(\pi x)$.
+/// Kernel function for $\sin(\pi x)$ using minimax polynomial approximation.
+///
+/// # Input Range
+///
+/// This function is designed for $x \in [-1/4, 1/4]$.
+///
+/// # Polynomial Approximation
+///
+/// Since $\sin(\pi x)$ is an odd function, we approximate $\sin(\pi x) / x$ with an even polynomial:
+/// $$\frac{\sin(\pi x)}{x} \approx c_0 + c_2 x^2 + c_4 x^4 + \cdots + c_{14} x^{14}$$
+///
+/// where $c_0 = \pi$ (the leading coefficient). The final result is:
+/// $$\sin(\pi x) \approx x \cdot (c_0 + c_2 x^2 + c_4 x^4 + \cdots + c_{14} x^{14})$$
+///
+/// # Double-Double Arithmetic
+///
+/// The leading coefficient $c_0 = \pi$ cannot be exactly represented in f64, so we use
+/// double-double representation: $c_0 = c_{0,hi} + c_{0,lo}$ where:
+/// - $c_{0,hi}$ = `0x1.921fb54442d18p+1` (the nearest f64 to π)
+/// - $c_{0,lo}$ = `0x1.1a5f14401a52p-53` (the correction term)
+///
+/// This ensures the polynomial evaluation maintains nearly 1 ULP accuracy.
 #[inline]
 fn sinpi_kernel(x: f64) -> f64 {
     // coefficients for minimax polynormal of sin(pi*x)/x
@@ -42,6 +91,10 @@ fn sinpi_kernel(x: f64) -> f64 {
     c0_hi.mul_add(x, x * r)
 }
 
+/// Kernel function for $\sin(\pi x)$ (f32 version).
+///
+/// Uses f64 intermediate calculations with a degree-4 minimax polynomial
+/// for the reduced argument $x \in [-1/4, 1/4]$.
 #[inline]
 fn sinpif_kernel(x: f32) -> f32 {
     let c0 = hexf64!("0x1.921fb6p1"); // 3.1415927410125732
@@ -120,6 +173,10 @@ fn cospi_kernel(x: f64) -> f64 {
     w + x_square.mul_add(r, ((c0 - w) + a_x_square_hi) - a_x_square_lo)
 }
 
+/// Kernel function for $\cos(\pi x)$ (f32 version).
+///
+/// Uses f64 intermediate calculations with a degree-5 minimax polynomial
+/// for the reduced argument $x \in [-1/4, 1/4]$.
 #[inline]
 fn cospif_kernel(x: f32) -> f32 {
     let c0 = 1.0;
@@ -137,6 +194,46 @@ fn cospif_kernel(x: f32) -> f32 {
 
 /// Compute $\sin(\pi x)$ more accurately than `sin(pi*x)`, especially for large `x` (f64).
 ///
+/// # Algorithm
+///
+/// The computation uses **argument reduction** combined with **minimax polynomial approximation**.
+///
+/// ## Step 1: Handle Special Cases
+///
+/// - If $x$ is NAN or $\pm\infty$, return NAN.
+/// - If $|x| \geqslant 2^{53}$ (the largest integer representable in f64), $x$ is an even integer,
+///   so $\sin(\pi x) = 0$ with the sign of $x$.
+///
+/// ## Step 2: Argument Reduction
+///
+/// Since $\sin(\pi x)$ has period 2, we reduce $x$ to the interval $[-1/4, 1/4]$ where the
+/// polynomial approximation is most accurate.
+///
+/// Let $n = \text{round}(2|x|)$, then compute the reduced argument:
+/// $$r = |x| - \frac{n}{2} \in \left[-\frac{1}{4}, \frac{1}{4}\right]$$
+///
+/// The quadrant $n \mod 4$ determines which trigonometric identity to use:
+///
+/// | $n \mod 4$ | Identity                              |
+/// |------------|---------------------------------------|
+/// | 0          | $\sin(\pi x) = \sin(\pi r)$           |
+/// | 1          | $\sin(\pi x) = \cos(\pi r)$           |
+/// | 2          | $\sin(\pi x) = -\sin(\pi r)$          |
+/// | 3          | $\sin(\pi x) = -\cos(\pi r)$          |
+///
+/// ## Step 3: Polynomial Evaluation
+///
+/// For $|r| \leqslant 1/4$, we use minimax polynomials:
+/// - $\sin(\pi r) \approx r \cdot P(r^2)$ where $P$ is a degree-7 polynomial
+/// - $\cos(\pi r) \approx Q(r^2)$ where $Q$ is a degree-7 polynomial
+///
+/// The polynomials are computed using Horner's method with double-double arithmetic
+/// for the leading terms to achieve nearly 1 ULP accuracy.
+///
+/// ## Step 4: Sign Adjustment
+///
+/// Since $\sin$ is an odd function, if $x < 0$, negate the result.
+///
 /// # Notes
 ///
 /// If `x` is infinite or NAN, return NAN.
@@ -150,7 +247,8 @@ pub fn sinpi(x: f64) -> f64 {
         return 0.0f64.copysign(x);
     }
 
-    // reduce x to interval [0, 0.5]
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
+    // n = round(2 * |x|), so rx = |x| - n/2 ∈ [-1/4, 1/4]
     let n = (2.0 * x_abs).round();
     let rx = (-0.5f64).mul_add(n, x_abs);
     let n = n as i64 & 3;
@@ -164,6 +262,9 @@ pub fn sinpi(x: f64) -> f64 {
 }
 
 /// Compute $\sin(\pi x)$ more accurately than `sin(pi*x)`, especially for large `x` (f32).
+///
+/// See [`sinpi`] for detailed algorithm description. This is the single-precision version
+/// using f64 intermediate calculations for better accuracy.
 ///
 /// # Notes
 ///
@@ -193,6 +294,38 @@ pub fn sinpif(x: f32) -> f32 {
 
 /// Compute $\cos(\pi x)$ more accurately than `cos(pi*x)`, especially for large `x` (f64).
 ///
+/// # Algorithm
+///
+/// The computation uses **argument reduction** combined with **minimax polynomial approximation**.
+///
+/// ## Step 1: Handle Special Cases
+///
+/// - If $x$ is NAN or $\pm\infty$, return NAN.
+/// - If $|x| \geqslant 2^{53}$ (the largest integer representable in f64), $x$ is an even integer,
+///   so $\cos(\pi x) = 1$.
+///
+/// ## Step 2: Argument Reduction
+///
+/// Since $\cos(\pi x)$ has period 2 and is even ($\cos(\pi(-x)) = \cos(\pi x)$), we reduce
+/// $|x|$ to the interval $[-1/4, 1/4]$ where the polynomial approximation is most accurate.
+///
+/// Let $n = \text{round}(2|x|)$, then compute the reduced argument:
+/// $$r = |x| - \frac{n}{2} \in \left[-\frac{1}{4}, \frac{1}{4}\right]$$
+///
+/// The quadrant $n \mod 4$ determines which trigonometric identity to use:
+///
+/// | $n \mod 4$ | Identity                              |
+/// |------------|---------------------------------------|
+/// | 0          | $\cos(\pi x) = \cos(\pi r)$           |
+/// | 1          | $\cos(\pi x) = -\sin(\pi r)$          |
+/// | 2          | $\cos(\pi x) = -\cos(\pi r)$          |
+/// | 3          | $\cos(\pi x) = \sin(\pi r)$           |
+///
+/// ## Step 3: Polynomial Evaluation
+///
+/// For $|r| \leqslant 1/4$, we use minimax polynomials with double-double arithmetic
+/// for the leading terms.
+///
 /// # Notes
 ///
 /// If `x` is infinite or NAN, return NAN.
@@ -206,7 +339,8 @@ pub fn cospi(x: f64) -> f64 {
         return 1.0;
     }
 
-    // reduce x to interval [0, 0.5]
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
+    // n = round(2 * |x|), so rx = |x| - n/2 ∈ [-1/4, 1/4]
     let n = (2.0 * x_abs).round();
     let rx = (-0.5f64).mul_add(n, x_abs);
     let n = n as i64 & 3;
@@ -219,6 +353,9 @@ pub fn cospi(x: f64) -> f64 {
 }
 
 /// Compute $\cos(\pi x)$ more accurately than `cos(pi*x)`, especially for large `x` (f32).
+///
+/// See [`cospi`] for detailed algorithm description. This is the single-precision version
+/// using f64 intermediate calculations for better accuracy.
 ///
 /// # Notes
 ///
@@ -247,6 +384,26 @@ pub fn cospif(x: f32) -> f32 {
 
 /// Simultaneously compute [`sinpi`] and [`cospi`] (f64).
 ///
+/// This function computes both $\sin(\pi x)$ and $\cos(\pi x)$ in a single call,
+/// which is more efficient than calling [`sinpi`] and [`cospi`] separately since
+/// the argument reduction only needs to be done once.
+///
+/// # Algorithm
+///
+/// Uses the same argument reduction as [`sinpi`] and [`cospi`], computing both
+/// kernel functions and applying the appropriate signs based on the quadrant.
+///
+/// | $n \mod 4$ | $\sin(\pi x)$     | $\cos(\pi x)$     |
+/// |------------|-------------------|-------------------|
+/// | 0          | $\sin(\pi r)$     | $\cos(\pi r)$     |
+/// | 1          | $\cos(\pi r)$     | $-\sin(\pi r)$    |
+/// | 2          | $-\sin(\pi r)$    | $-\cos(\pi r)$    |
+/// | 3          | $-\cos(\pi r)$    | $\sin(\pi r)$     |
+///
+/// # Returns
+///
+/// A tuple `(sin(πx), cos(πx))`.
+///
 /// # Notes
 ///
 /// If `x` is infinite or NAN, return (NAN, NAN).
@@ -255,12 +412,12 @@ pub fn sincospi(x: f64) -> (f64, f64) {
     if x_abs.is_infinite() || x_abs.is_nan() {
         return (f64::NAN, f64::NAN);
     }
-    // If x is too large, return 0.0
+    // If x is too large, return (0.0, 1.0)
     if x_abs >= MAXINTFLOAT64 as f64 {
         return (0.0f64.copysign(x), 1.0);
     }
 
-    // reduce x to interval [0, 0.5]
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
     let n = (2.0 * x_abs).round();
     let rx = (-0.5f64).mul_add(n, x_abs);
     let n = n as i64 & 3;
@@ -278,6 +435,13 @@ pub fn sincospi(x: f64) -> (f64, f64) {
 
 /// Simultaneously compute [`sinpif`] and [`cospif`] (f32).
 ///
+/// See [`sincospi`] for detailed algorithm description. This is the single-precision version
+/// using f64 intermediate calculations for better accuracy.
+///
+/// # Returns
+///
+/// A tuple `(sin(πx), cos(πx))`.
+///
 /// # Notes
 ///
 /// If `x` is infinite or NAN, return (NAN, NAN).
@@ -286,12 +450,12 @@ pub fn sincospif(x: f32) -> (f32, f32) {
     if x_abs.is_infinite() || x_abs.is_nan() {
         return (f32::NAN, f32::NAN);
     }
-    // If x is too large, return 0.0
+    // If x is too large, return (0.0, 1.0)
     if x_abs >= MAXINTFLOAT32 as f32 {
         return (0.0f32.copysign(x), 1.0f32);
     }
 
-    // reduce x to interval [0, 0.5]
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
     let n = (2.0 * x_abs).round();
     let rx = (-0.5f32).mul_add(n, x_abs);
     let n = n as i64 & 3;
