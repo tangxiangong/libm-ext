@@ -15,11 +15,6 @@ Performance
 For small arrays, serial execution avoids threading overhead.
 For large arrays, parallel execution using Rayon provides significant speedup.
 
-The default thresholds are tuned for typical modern CPUs:
-
-- sinpi: 10,000 elements
-- cospi: 16,000 elements
-
 Supported dtypes
 ----------------
 
@@ -76,7 +71,7 @@ def _sinpi_parallel(x: npt.NDArray) -> npt.NDArray:
         raise ValueError(f"Unsupported dtype: {x.dtype}")
 
 
-def sinpi(x: npt.NDArray, threshold: int = 10000) -> npt.NDArray:
+def sinpi(x: npt.NDArray, threshold: int = 16000) -> npt.NDArray:
     r"""
     Compute sin(πx) element-wise for a NumPy array.
 
