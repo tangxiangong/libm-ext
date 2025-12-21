@@ -6,90 +6,133 @@
 //! - [`cospi`] / [`cospif`]
 //! - [`sincospi`] / [`sincospif`]
 //!
+#![allow(clippy::approx_constant)]
 
 use crate::utils::evalpoly;
+use hexf::hexf64;
 
 const MAXINTFLOAT64: u64 = 1 << f64::MANTISSA_DIGITS;
 const MAXINTFLOAT32: u64 = 1 << f32::MANTISSA_DIGITS;
 
-/// Uses minimax polynomial of $\sin(\pi x)$ for $\pi x \in [0, 0.25]$ .
+/// Uses minimax polynomial of $\sin(\pi x)/x$ for $x \in [0, 0.25]$ to approximate $\sin(\pi x)$.
 #[inline]
 fn sinpi_kernel(x: f64) -> f64 {
+    // coefficients for minimax polynormal of sin(pi*x)/x
+    // c0 = c0_hi + c0_lo
+    let c0_hi = hexf64!("0x1.921fb54442d18p+1"); // 3.141592653589793
+    let c0_lo = hexf64!("0x1.1a5f14401a52p-53"); // 1.2245907532226012e-16
+    let c2 = hexf64!("-0x1.4abbce625be01p2"); // -5.167712780049897
+    let c4 = hexf64!("0x1.466bc67753d55p1"); // 2.550164039864891
+    let c6 = hexf64!("-0x1.32d2ccde1222cp-1"); // -0.5992645283777782
+    let c8 = hexf64!("0x1.50782aae65ef4p-4"); // 8.214584991798884e-2
+    let c10 = hexf64!("-0x1.e2fa787f268fep-8"); // -7.369665544638913e-3
+    let c12 = hexf64!("0x1.e06afd55415bp-12"); // 4.5816223912739217e-4
+    let c14 = hexf64!("0x1.add9d45ae8195p-17"); // 1.2810554997078747e-5
+
     let x_square = x * x;
     let x_bisquare = x_square * x_square;
-    let coes = [
-        2.5501640398773415,
-        -0.5992645293202981,
-        0.08214588658006512,
-        -7.370429884921779e-3,
-        4.662827319453555e-4,
-        -2.1717412523382308e-5,
-    ];
-    let r = evalpoly(&coes, x_square);
-    let inner = x_bisquare.mul_add(r, 1.2245907532225998e-16);
-    let inner = (-5.16771278004997f64).mul_add(x_square, inner);
 
-    3.141592653589793f64.mul_add(x, x * inner)
+    // c4 + c6*x^2 + ... + c14*x^10
+    let mut r = evalpoly(&[c4, c6, c8, c10, c12, c14], x_square);
+    // c0_lo + c4*x^4 + c6*x^6 + ... + c14*x^14
+    r = x_bisquare.mul_add(r, c0_lo);
+    // c0_lo + c2*x^2 + c4*x^4 + ... + c14*x^14
+    r = c2.mul_add(x_square, r);
+    // c0_hi*x + co_lo*x + c2*x^3 + c4*x^5 + ... + c14*x^15
+    c0_hi.mul_add(x, x * r)
 }
 
 #[inline]
 fn sinpif_kernel(x: f32) -> f32 {
-    sinpif_kernel_wide(x) as f32
+    let c0 = hexf64!("0x1.921fb6p1"); // 3.1415927410125732
+    let c2 = hexf64!("-0x1.4abc1cp2"); // -5.167731285095215
+    let c4 = hexf64!("0x1.468e6cp1"); // 2.5512213706970215
+    let c6 = hexf64!("-0x1.3e497cp-1"); // -0.6216543912887573
+    let c8 = hexf64!("0x1.eb5482p-3"); // 0.23990727961063385
+
+    let x_f64 = x as f64;
+
+    let res_f64 = x_f64 * evalpoly(&[c0, c2, c4, c6, c8], x_f64 * x_f64);
+    res_f64 as f32
 }
 
-/// Uses minimax polynomial of $\cos(\pi x)$ for $\pi x \in [0, 0.25]$ .
+/// Uses minimax polynomial of $\cos(\pi x)$ for $x \in [0, 0.25]$.
+///
+/// # Double-Double Compensation Technique
+///
+/// To achieve nearly 1 ULP accuracy, we use double-double arithmetic for the
+/// leading terms where cancellation error is most significant.
+///
+/// The polynomial approximation is:
+/// $$\cos(\pi x) \approx c_0 + c_2 x^2 + c_4 x^4 + \cdots + c_{14} x^{14}$$
+///
+/// where $c_0 = 1$ and $c_2 \approx -\pi^2/2 \approx -4.9348$.
+///
+/// ## Why Double-Double?
+///
+/// When computing $1 + c_2 x^2$ for small $x$, the result is close to 1, causing
+/// significant cancellation. A single f64 cannot represent $c_2$ exactly, so we
+/// split it: $c_2 = c_{2,hi} - c_{2,lo}$ where $c_{2,hi}$ is the nearest f64 and
+/// $c_{2,lo}$ is the small correction term.
+///
+/// ## Algorithm
+///
+/// 1. Compute `a_x_square_hi = c2_hi * x²` (primary term)
+/// 2. Compute `a_x_square_lo = c2_lo * x² + rounding_error(c2_hi * x²)`
+///    using FMA to capture the rounding error: `(-c2_hi) * x² + a_x_square_hi`
+/// 3. Compute `w = c0 + a_x_square_hi` (may lose precision)
+/// 4. Recover lost precision: `(c0 - w) + a_x_square_hi` gives the rounding error
+/// 5. Final result compensates: `w + (higher_terms + rounding_error - c2_lo*x²)`
+///
+/// This technique is based on Dekker's TwoSum and TwoProduct algorithms.
 #[inline]
 fn cospi_kernel(x: f64) -> f64 {
-    let x_square = x * x;
-    let coes = [
-        4.058712126416765,
-        -1.3352627688537357,
-        0.23533063027900392,
-        -0.025806887811869204,
-        1.9294917136379183e-3,
-        -1.0368935675474665e-4,
-    ];
-    let r = x_square * evalpoly(&coes, x_square);
-    let a_x_square = 4.934802200544679 * x_square;
-    let a_x_square_lo = 3.109686485461973e-16f64.mul_add(
-        x_square,
-        4.934802200544679f64.mul_add(x_square, -a_x_square),
-    );
-    let w = 1.0 - a_x_square;
+    // coefficients for minimax polynomial of cos(pi*x)
+    let c0 = 1.0;
+    // c2 = c2_hi - c2_lo
+    let c2_hi = hexf64!("-0x1.3bd3cc9be45dep2"); // -4.934802200544679
+    let c2_lo = hexf64!("0x1.219c35926754dp-52"); // 2.5119679985578543e-16
+    let c4 = hexf64!("0x1.03c1f081b5a67p2"); // 4.058712126416686
+    let c6 = hexf64!("-0x1.55d3c7e3c325bp0"); // -1.3352627688465393
+    let c8 = hexf64!("0x1.e1f5067b90b37p-3"); // 0.23533062996474438
+    let c10 = hexf64!("-0x1.a6d1e7294bffap-6"); // -2.5806880706284098e-2
+    let c12 = hexf64!("0x1.f9c89ca1d5187p-10"); // 1.9294114685709256e-3
+    let c14 = hexf64!("-0x1.b167302e37198p-14"); // -1.0333134625590266e-4
 
-    w + x_square.mul_add(r, ((1.0 - w) - a_x_square) - a_x_square_lo)
+    let x_square = x * x;
+
+    // Higher-order terms: c4*x^4 + c6*x^6 + ... + c14*x^14
+    let r = x_square * evalpoly(&[c4, c6, c8, c10, c12, c14], x_square);
+
+    // Double-double multiplication: c2 * x² = (c2_hi - c2_lo) * x²
+    // Step 1: Primary product
+    let a_x_square_hi = c2_hi * x_square;
+    // Step 2: Capture rounding error of c2_hi * x² using FMA, plus c2_lo * x²
+    //         = c2_lo * x² + (c2_hi * x² - a_x_square_hi)  [rounding error]
+    let a_x_square_lo = c2_lo.mul_add(x_square, (-c2_hi).mul_add(x_square, a_x_square_hi));
+
+    // Double-double addition: c0 + c2_hi * x²
+    let w = c0 + a_x_square_hi;
+
+    // Compensated summation:
+    // - (c0 - w) + a_x_square_hi: recovers rounding error from c0 + a_x_square_hi
+    // - Subtract a_x_square_lo: because c2 = c2_hi - c2_lo, we need to subtract c2_lo * x²
+    w + x_square.mul_add(r, ((c0 - w) + a_x_square_hi) - a_x_square_lo)
 }
 
 #[inline]
 fn cospif_kernel(x: f32) -> f32 {
-    cospif_kernel_wide(x) as f32
-}
+    let c0 = 1.0;
+    let c2 = hexf64!("-0x1.3bd3ccp2"); // -4.934802055358887
+    let c4 = hexf64!("0x1.03c1a6p2"); // 4.058694362640381
+    let c6 = hexf64!("-0x1.55a3b4p0"); // -1.334529161453247
+    let c8 = hexf64!("0x1.c85d38p-3"); // 0.222834050655365
+    let c10 = hexf64!("0x1.97cb1p-5"); // 0.04977944493293762
 
-#[inline]
-fn cospif_kernel_wide(x: f32) -> f64 {
     let x_f64 = x as f64;
-    let coes = [
-        1.0,
-        -4.934802200541122,
-        4.058712123568637,
-        -1.3352624040152927,
-        0.23531426791507182,
-        -0.02550710082498761,
-    ];
-    evalpoly(&coes, x_f64 * x_f64)
-}
 
-#[inline]
-fn sinpif_kernel_wide(x: f32) -> f64 {
-    let x_f64 = x as f64;
-    let coes = [
-        3.1415926535762266,
-        -5.167712769188119,
-        2.5501626483206374,
-        -0.5992021090314925,
-        0.08100185277841528,
-    ];
-    x_f64 * evalpoly(&coes, x_f64 * x_f64)
+    let res_f64 = evalpoly(&[c0, c2, c4, c6, c8, c10], x_f64 * x_f64);
+    res_f64 as f32
 }
 
 /// Compute $\sin(\pi x)$ more accurately than `sin(pi*x)`, especially for large `x` (f64).
