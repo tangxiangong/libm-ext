@@ -7,7 +7,7 @@ readme = "README.md"
 authors = ["tangxiangong <tangxiangong@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tangxiangong/libm-ext"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 
 [package.metadata.docs.rs]
