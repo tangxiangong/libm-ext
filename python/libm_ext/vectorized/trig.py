@@ -5,6 +5,7 @@ This module provides vectorized (element-wise) implementations of:
 
 - :func:`sinpi` - Compute sin(πx) for each element
 - :func:`cospi` - Compute cos(πx) for each element
+- :func:`tanpi` - Compute tan(πx) for each element
 
 These functions automatically switch between serial and parallel execution
 based on array size for optimal performance.
@@ -233,6 +234,100 @@ def cospi(x: npt.NDArray, threshold: int = 16000) -> npt.NDArray:
         return _cospi_serial(x)
     else:
         return _cospi_parallel(x)
+
+
+def _tanpi_serial(x: npt.NDArray) -> npt.NDArray:
+    """
+    Vectorized tanpi using serial mode (single-threaded).
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array of float32 or float64.
+
+    Returns
+    -------
+    ndarray
+        Element-wise tan(πx).
+    """
+    if x.dtype == np.float64:
+        return _core.tanpi_vectorized_serial(x)
+    elif x.dtype == np.float32:
+        return _core.tanpif_vectorized_serial(x)
+    else:
+        raise ValueError(f"Unsupported dtype: {x.dtype}")
+
+
+def _tanpi_parallel(x: npt.NDArray) -> npt.NDArray:
+    """
+    Vectorized tanpi using parallel mode (multi-threaded via Rayon).
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array of float32 or float64.
+
+    Returns
+    -------
+    ndarray
+        Element-wise tan(πx).
+    """
+    if x.dtype == np.float64:
+        return _core.tanpi_vectorized_parallel(x)
+    elif x.dtype == np.float32:
+        return _core.tanpif_vectorized_parallel(x)
+    else:
+        raise ValueError(f"Unsupported dtype: {x.dtype}")
+
+
+def tanpi(x: npt.NDArray, threshold: int = 16000) -> npt.NDArray:
+    r"""
+    Compute tan(πx) element-wise for a NumPy array.
+
+    This function automatically switches between serial and parallel execution
+    based on array size for optimal performance.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array. Must be float32 or float64.
+    threshold : int, default=10000
+        Array size threshold for switching to parallel execution.
+        Arrays smaller than this use serial execution.
+
+    Returns
+    -------
+    ndarray
+        Element-wise tan(πx) with the same shape and dtype as input.
+
+    Raises
+    ------
+    ValueError
+        If dtype of x is not float32 or float64.
+
+    Algorithm
+    ---------
+
+    Uses the same high-precision algorithm as :func:`libm_ext.tanpi`:
+
+    1. **Argument reduction**: Reduce x to [-1/4, 1/4] using n = round(2|x|)
+    2. **Polynomial evaluation**: Minimax polynomial with double-double arithmetic
+    3. **Sign adjustment**: Apply quadrant-based sign correction
+
+    See :func:`libm_ext.tanpi` for detailed algorithm description.
+
+    See Also
+    --------
+    sinpi : Vectorized sin(πx)
+    cospi : Vectorized cos(πx)
+    libm_ext.tanpi : Scalar version
+    libm_ext.sinpi : Scalar version
+    libm_ext.cospi : Scalar version
+    """
+    if x.size < threshold:
+        return _tanpi_serial(x)
+    else:
+        return _tanpi_parallel(x)
 
 
 if __name__ == "__main__":

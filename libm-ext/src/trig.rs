@@ -9,8 +9,9 @@
 //! | [`sinpi`] / [`sinpif`] | Compute $\sin(\pi x)$ |
 //! | [`cospi`] / [`cospif`] | Compute $\cos(\pi x)$ |
 //! | [`sincospi`] / [`sincospif`] | Compute both $\sin(\pi x)$ and $\cos(\pi x)$ |
+//! | [`tanpi`] / [`tanpif`] | Compute $\tan(\pi x)$ |
 //!
-//! # Why `sinpi` and `cospi`?
+//! # Why `sinpi` (`cospi`, `tanpi`)?
 //!
 //! Computing `sin(π * x)` directly with the standard library suffers from two problems:
 //!
@@ -471,6 +472,72 @@ pub fn sincospif(x: f32) -> (f32, f32) {
     (si, co)
 }
 
+///Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f64).
+///
+/// See [`sincospi`] for detailed algorithm description.
+///
+/// # Notes
+///
+/// If `x` is infinite or NAN, return NAN.
+pub fn tanpi(x: f64) -> f64 {
+    let x_abs = x.abs();
+    if x_abs.is_infinite() || x_abs.is_nan() {
+        return f64::NAN;
+    }
+    // If x is too large, return 0.0
+    if x_abs >= MAXINTFLOAT64 as f64 {
+        return 0.0f64.copysign(x);
+    }
+
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
+    let n = (2.0 * x_abs).round();
+    let rx = (-0.5f64).mul_add(n, x_abs);
+    let n = n as i64 & 3;
+    let mut si = sinpi_kernel(rx);
+    let mut co = cospi_kernel(rx);
+    (si, co) = match n {
+        0 => (si, co),
+        1 => (co, 0.0 - si),
+        2 => (0.0 - si, 0.0 - co),
+        _ => (0.0 - co, si),
+    };
+    si = if x.is_sign_negative() { -si } else { si };
+    si / co
+}
+
+/// Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f32).
+///
+/// See [`sincospif`] for detailed algorithm description.
+///
+/// # Notes
+///
+/// If `x` is infinite or NAN, return NAN.
+pub fn tanpif(x: f32) -> f32 {
+    let x_abs = x.abs();
+    if x_abs.is_infinite() || x_abs.is_nan() {
+        return f32::NAN;
+    }
+    // If x is too large, return 0.0
+    if x_abs >= MAXINTFLOAT32 as f32 {
+        return 0.0f32.copysign(x);
+    }
+
+    // Argument reduction: reduce x to interval [-0.25, 0.25]
+    let n = (2.0 * x_abs).round();
+    let rx = (-0.5f32).mul_add(n, x_abs);
+    let n = n as i64 & 3;
+    let mut si = sinpif_kernel(rx);
+    let mut co = cospif_kernel(rx);
+    (si, co) = match n {
+        0 => (si, co),
+        1 => (co, 0.0 - si),
+        2 => (0.0 - si, 0.0 - co),
+        _ => (0.0 - co, si),
+    };
+    si = if x.is_sign_negative() { -si } else { si };
+    si / co
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -515,6 +582,15 @@ mod tests {
         assert_approx_eq!(cospi(0.5), 0.0, EPSILON_F64);
         assert_approx_eq!(cospi(1.5), 0.0, EPSILON_F64);
         assert_approx_eq!(cospi(-0.5), 0.0, EPSILON_F64);
+    }
+
+    #[test]
+    fn test_tanpi_special_values() {
+        // tan(pi * n) = 0 for integer n
+        for i in -10..=10 {
+            let x = i as f64;
+            assert_approx_eq!(tanpi(x), 0.0, EPSILON_F64);
+        }
     }
 
     #[test]

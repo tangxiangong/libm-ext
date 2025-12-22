@@ -1,3 +1,3 @@
-from .trig import sinpi, cospi
+from .trig import sinpi, cospi, tanpi
 
-__all__ = ["sinpi", "cospi"]
+__all__ = ["sinpi", "cospi", "tanpi"]

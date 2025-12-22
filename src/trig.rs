@@ -48,9 +48,25 @@ pub fn sincospif(x: f32) -> (f32, f32) {
     trig::sincospif(x)
 }
 
+/// Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f64).
+#[cfg_attr(feature = "stub_gen", gen_stub_pyfunction)]
+#[pyfunction]
+pub fn tanpi(x: f64) -> f64 {
+    trig::tanpi(x)
+}
+
+/// Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f32).
+#[cfg_attr(feature = "stub_gen", gen_stub_pyfunction)]
+#[pyfunction]
+pub fn tanpif(x: f32) -> f32 {
+    trig::tanpif(x)
+}
+
 vectorized!(
     (trig::sinpi, f64),
     (trig::cospi, f64),
     (trig::sinpif, f32),
-    (trig::cospif, f32)
+    (trig::cospif, f32),
+    (trig::tanpi, f64),
+    (trig::tanpif, f32),
 );

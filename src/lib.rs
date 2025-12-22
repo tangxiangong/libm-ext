@@ -77,6 +77,8 @@ fn _core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
         trig::cospif,
         trig::sincospi,
         trig::sincospif,
+        trig::tanpi,
+        trig::tanpif,
         trig::sinpi_vectorized_serial,
         trig::sinpi_vectorized_parallel,
         trig::cospi_vectorized_serial,
@@ -85,6 +87,10 @@ fn _core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
         trig::sinpif_vectorized_parallel,
         trig::cospif_vectorized_serial,
         trig::cospif_vectorized_parallel,
+        trig::tanpi_vectorized_serial,
+        trig::tanpi_vectorized_parallel,
+        trig::tanpif_vectorized_serial,
+        trig::tanpif_vectorized_parallel,
     );
     Ok(())
 }

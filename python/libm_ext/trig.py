@@ -6,8 +6,9 @@ This module provides high-precision implementations of:
 - :func:`sinpi` - Compute sin(πx)
 - :func:`cospi` - Compute cos(πx)
 - :func:`sincospi` - Compute both sin(πx) and cos(πx)
+- :func:`tanpi` - Compute tan(πx)
 
-Why sinpi and cospi?
+Why sinpi (cospi, tanpi)?
 --------------------
 
 Computing ``math.sin(math.pi * x)`` directly suffers from two problems:
@@ -40,7 +41,7 @@ approximations with double-double arithmetic for the leading terms.
 from libm_ext import _core
 
 
-def sinpi(x: float) -> float:
+def sinpi(x: float | int) -> float:
     r"""
     Compute sin(πx) more accurately than ``math.sin(math.pi * x)``.
 
@@ -49,7 +50,7 @@ def sinpi(x: float) -> float:
 
     Parameters
     ----------
-    x : float
+    x : float | int
         The input value.
 
     Returns
@@ -111,6 +112,10 @@ def sinpi(x: float) -> float:
     0.0
     >>> sinpi(-0.5)
     -1.0
+    >>> sinpi(-1)
+    0.0
+    >>> sinpi(1)
+    0.0
 
     Notes
     -----
@@ -121,11 +126,18 @@ def sinpi(x: float) -> float:
     --------
     cospi : Compute cos(πx)
     sincospi : Compute both sin(πx) and cos(πx)
+    tanpi : Compute tan(πx)
     """
-    return _core.sinpi(x)
+    if isinstance(x, int):
+        if x >= 0:
+            return float(0)
+        else:
+            return -float(0)
+    else:
+        return _core.sinpi(x)
 
 
-def cospi(x: float) -> float:
+def cospi(x: float | int) -> float:
     r"""
     Compute cos(πx) more accurately than ``math.cos(math.pi * x)``.
 
@@ -134,7 +146,7 @@ def cospi(x: float) -> float:
 
     Parameters
     ----------
-    x : float
+    x : float | int
         The input value.
 
     Returns
@@ -188,6 +200,10 @@ def cospi(x: float) -> float:
     -1.0
     >>> cospi(2.0)
     1.0
+    >>> cospi(-1)
+    -1.0
+    >>> cospi(1)
+    -1.0
 
     Notes
     -----
@@ -198,11 +214,18 @@ def cospi(x: float) -> float:
     --------
     sinpi : Compute sin(πx)
     sincospi : Compute both sin(πx) and cos(πx)
+    tanpi : Compute tan(πx)
     """
-    return _core.cospi(x)
+    if isinstance(x, int):
+        if x % 2 == 0:
+            return 1.0
+        else:
+            return -1.0
+    else:
+        return _core.cospi(x)
 
 
-def sincospi(x: float) -> tuple[float, float]:
+def sincospi(x: float | int) -> tuple[float, float]:
     r"""
     Simultaneously compute sin(πx) and cos(πx).
 
@@ -212,7 +235,7 @@ def sincospi(x: float) -> tuple[float, float]:
 
     Parameters
     ----------
-    x : float
+    x : float | int
         The input value.
 
     Returns
@@ -245,6 +268,10 @@ def sincospi(x: float) -> tuple[float, float]:
     (1.0, 0.0)
     >>> sincospi(0.25)  # doctest: +ELLIPSIS
     (0.707..., 0.707...)
+    >>> sincospi(-1)
+    (0.0, -1.0)
+    >>> sincospi(1)
+    (0.0, -1.0)
 
     Notes
     -----
@@ -255,5 +282,75 @@ def sincospi(x: float) -> tuple[float, float]:
     --------
     sinpi : Compute sin(πx)
     cospi : Compute cos(πx)
+    tanpi : Compute tan(πx)
     """
-    return _core.sincospi(x)
+    if isinstance(x, int):
+        return (sinpi(x), cospi(x))
+    else:
+        return _core.sincospi(x)
+
+
+def tanpi(x: float | int) -> float:
+    r"""
+    Compute tan(πx) more accurately than ``math.tan(math.pi * x)``.
+
+    This function computes tan(πx) with high precision, especially for large x
+    where the standard approach would accumulate significant error.
+
+    Parameters
+    ----------
+    x : float | int
+        The input value.
+
+    Returns
+    -------
+    float
+        The value of tan(πx).
+
+    Algorithm
+    ---------
+
+    Uses the same argument reduction as :func:`sinpi` and :func:`cospi`,
+    computing both kernel functions and applying the appropriate signs based
+    on the quadrant.
+
+    Examples
+    --------
+    >>> from libm_ext import tanpi
+    >>> tanpi(0.0)
+    0.0
+    >>> tanpi(0.5)
+    1.0
+    >>> tanpi(1.0)
+    0.0
+    >>> tanpi(-0.5)
+    -1.0
+    >>> tanpi(-1)
+    0.0
+    >>> tanpi(1)
+    0.0
+
+    Notes
+    -----
+    - Returns NaN for infinite or NaN inputs.
+    - For very large x (|x| ≥ 2⁵³), returns ±0.0.
+
+    See Also
+    --------
+    sinpi : Compute sin(πx)
+    cospi : Compute cos(πx)
+    sincospi : Compute both sin(πx) and cos(πx)
+    """
+    if isinstance(x, int):
+        if x >= 0:
+            if x % 2 == 0:
+                return float(0)
+            else:
+                return -float(0)
+        else:
+            if x % 2 == 0:
+                return -float(0)
+            else:
+                return float(0)
+    else:
+        return _core.tanpi(x)

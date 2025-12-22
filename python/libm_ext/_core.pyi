@@ -51,3 +51,21 @@ def sinpif_vectorized_parallel(v: numpy.typing.NDArray[numpy.float32]) -> numpy.
 
 def sinpif_vectorized_serial(v: numpy.typing.NDArray[numpy.float32]) -> numpy.typing.NDArray[numpy.float32]: ...
 
+def tanpi(x: builtins.float) -> builtins.float:
+    r"""
+    Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f64).
+    """
+
+def tanpi_vectorized_parallel(v: numpy.typing.NDArray[numpy.float64]) -> numpy.typing.NDArray[numpy.float64]: ...
+
+def tanpi_vectorized_serial(v: numpy.typing.NDArray[numpy.float64]) -> numpy.typing.NDArray[numpy.float64]: ...
+
+def tanpif(x: builtins.float) -> builtins.float:
+    r"""
+    Compute $\tan(\pi x)$ more accurately than `tan(pi*x)`, especially for large `x` (f32).
+    """
+
+def tanpif_vectorized_parallel(v: numpy.typing.NDArray[numpy.float32]) -> numpy.typing.NDArray[numpy.float32]: ...
+
+def tanpif_vectorized_serial(v: numpy.typing.NDArray[numpy.float32]) -> numpy.typing.NDArray[numpy.float32]: ...
+
