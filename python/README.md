@@ -16,6 +16,8 @@ A Python package wrapping the essential mathematical special functions in <a hre
 - `sinpi` / `sinpif` for $\sin(\pi x)$ (double-precision / single-precision)
 - `cospi` / `cospif` for $\cos(\pi x)$ (double-precision / single-precision)
 - `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (double-precision / single-precision)
+- `tanpi` / `tanpif` for $\tan(\pi x)$ (double-precision / single-precision)
+
 
 ## Usage
 ### Scalar functions

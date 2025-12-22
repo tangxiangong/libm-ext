@@ -27,6 +27,7 @@ println!("sinpif(1.0) = {}", sinpif(1.0));
 - `sinpi` / `sinpif` for $\sin(\pi x)$ (`f64` / `f32`)
 - `cospi` / `cospif` for $\cos(\pi x)$ (`f64` / `f32`)
 - `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (`f64` / `f32`)
+- `tanpi` / `tanpif` for $\tan(\pi x)$ (`f64` / `f32`)
 
 ## License
 

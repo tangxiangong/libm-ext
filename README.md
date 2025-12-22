@@ -21,6 +21,7 @@ Please refer to [Python](python/README.md) or [Rust](libm-ext/README.md) for det
 - `sinpi` / `sinpif` for $\sin(\pi x)$ (double-precision / single-precision)
 - `cospi` / `cospif` for $\cos(\pi x)$ (double-precision / single-precision)
 - `sincospi` / `sincospif` for $\sin(\pi x)$ and $\cos(\pi x)$ (double-precision / single-precision)
+- `tanpi` / `tanpif` for $\tan(\pi x)$ (double-precision / single-precision)
 
 ## License
 
